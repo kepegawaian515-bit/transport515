@@ -1,42 +1,104 @@
 "use client";
-import { useState } from "react";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw.../exec";
+import { useState, useRef } from "react";
+
 export default function Page() {
-  const [status, setStatus] = useState("");
-  const [link, setLink] = useState("");
-  const [ket, setKet] = useState("");
-  const [loading, setLoading] = useState(false);
-  const canSubmit = () => {
-    if (!status) return false;
-    if (status === "NAIK TRANSUM" && !link.trim()) return false;
-    if (status === "TIDAK NAIK TRANSUM" && ket.trim().length < 10) return false;
-    return true;
+  const [nip, setNip] = useState("169606");
+  const [nama, setNama] = useState("Setiadi");
+  const [bagian, setBagian] = useState("Subbagian Tata Usaha");
+  const [status, setStatus] = useState("LIBUR");
+  const [foto, setFoto] = useState<string | null>(null);
+  const [showCam, setShowCam] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const openCamera = async () => {
+    setShowCam(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: { facingMode: "environment" } 
+      });
+      streamRef.current = stream;
+      if (videoRef.current) videoRef.current.srcObject = stream;
+    } catch (e) {
+      alert("Gagal buka kamera, pastikan ijin kamera diaktifkan!");
+      setShowCam(false);
+    }
   };
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
-    setLoading(true);
-    const payload = { TANGGAL: new Date().toLocaleDateString("id-ID"), NRK: e.target.nrk.value, NAMA: e.target.nama.value, UNIT: e.target.unit.value, STATUS: status, LINK: link, KETERANGAN: ket };
-    await fetch(SCRIPT_URL, { method: "POST", body: JSON.stringify(payload), mode: "no-cors" });
-    alert("SUKSES! NAIK tanpa foto = TIDAK VALID di rekap");
-    setLoading(false);
+
+  const closeCamera = () => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    setShowCam(false);
   };
+
+  const takePhoto = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    setFoto(canvas.toDataURL("image/jpeg", 0.8));
+    closeCamera();
+  };
+
+  const handleSubmit = () => {
+    if (status === "NAIK" && !foto) {
+      alert("Wajib FOTO bukti naik! Gak bisa kibul!");
+      return;
+    }
+    if (status === "LIBUR") {
+      alert("SUKSES! NAIK tanpa foto = TIDAK VALID di rekap");
+    } else {
+      alert(`SUKSES! ${nama} VALID NAIK dengan bukti foto! Anti Kibul!`);
+    }
+    // Reset foto after submit
+    // setFoto(null);
+  };
+
   return (
-    <div style={{maxWidth:440,margin:"0 auto",padding:16}}>
-      <h2>🚍 Transport 515 - Anti Kibul</h2>
-      <form onSubmit={handleSubmit} style={{display:"flex",flexDirection:"column",gap:14,border:"1px solid #ddd",padding:16,borderRadius:12}}>
-        <input name="nrk" placeholder="NRK" required style={{padding:12,borderRadius:8,border:"1px solid #ccc"}} />
-        <input name="nama" placeholder="Nama" required style={{padding:12,borderRadius:8,border:"1px solid #ccc"}} />
-        <input name="unit" placeholder="Unit" required style={{padding:12,borderRadius:8,border:"1px solid #ccc"}} />
-        <select value={status} onChange={e=>setStatus(e.target.value)} required style={{padding:12,borderRadius:8,border:"1px solid #ccc"}}>
-          <option value="">-- Pilih Status --</option>
-          <option>NAIK TRANSUM</option>
-          <option>TIDAK NAIK TRANSUM</option>
-          <option>LIBUR</option><option>CUTI</option><option>SAKIT</option>
+    <div className="min-h-screen bg-zinc-100 flex justify-center p-4">
+      <div className="w-full max-w-sm bg-white rounded-2xl shadow p-5 space-y-3">
+        <h1 className="font-bold text-center">TRANSPORT 515 - ANTI KIBUL</h1>
+        
+        <input className="w-full border rounded-lg p-3" value={nip} onChange={e=>setNip(e.target.value)} placeholder="NIP" />
+        <input className="w-full border rounded-lg p-3" value={nama} onChange={e=>setNama(e.target.value)} placeholder="Nama" />
+        <input className="w-full border rounded-lg p-3" value={bagian} onChange={e=>setBagian(e.target.value)} placeholder="Subbagian" />
+        
+        <select className="w-full border rounded-lg p-3" value={status} onChange={e=>{setStatus(e.target.value); if(e.target.value==="LIBUR") setFoto(null)}}>
+          <option>LIBUR</option>
+          <option>NAIK</option>
         </select>
-        {status === "NAIK TRANSUM" && <div style={{background:"#e8f5e9",padding:12,borderRadius:8}}><b>⚠️ WAJIB FOTO!</b> Kalau naik tanpa foto = Terhitung TIDAK VALID/TIDAK NAIK di rekap<br/><input value={link} onChange={e=>setLink(e.target.value)} placeholder="Link Foto" required style={{width:"100%",padding:10,marginTop:8}} /></div>}
-        {status === "TIDAK NAIK TRANSUM" && <div style={{background:"#ffebee",padding:12,borderRadius:8}}><b>⚠️ WAJIB ALASAN!</b><br/><textarea value={ket} onChange={e=>setKet(e.target.value)} placeholder="Alasan min 10 huruf" required style={{width:"100%",padding:10,marginTop:8}} /></div>}
-        <button disabled={!canSubmit()||loading} style={{padding:14,background:canSubmit()?"black":"gray",color:"white",borderRadius:8}}>{canSubmit()?"✅ SUBMIT VALID":"⚠️ LENGKAPI DULU"}</button>
-      </form>
+
+        {status === "NAIK" && (
+          <div className="space-y-2">
+            {!foto ? (
+              <button onClick={openCamera} className="w-full bg-blue-600 text-white rounded-lg p-3 font-bold">
+                📸 BUKA KAMERA (Wajib Foto Langsung)
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <img src={foto} className="w-full rounded-lg border" />
+                <button onClick={()=>setFoto(null)} className="w-full bg-zinc-200 rounded-lg p-2 text-sm">Foto Ulang</button>
+              </div>
+            )}
+            <p className="text-[11px] text-red-600 font-bold text-center">* Tidak bisa ambil dari galeri, harus foto langsung!</p>
+          </div>
+        )}
+
+        {showCam && (
+          <div className="fixed inset-0 bg-black z-50 flex flex-col">
+            <video ref={videoRef} autoPlay playsInline className="flex-1 object-cover" />
+            <div className="p-4 flex gap-3 bg-black">
+              <button onClick={closeCamera} className="flex-1 bg-zinc-700 text-white rounded-lg p-4">Batal</button>
+              <button onClick={takePhoto} className="flex-1 bg-white text-black rounded-lg p-4 font-bold">📸 JEPRET</button>
+            </div>
+          </div>
+        )}
+
+        <button onClick={handleSubmit} className="w-full bg-black text-white rounded-lg p-4 font-bold">
+          ✅ SUBMIT VALID
+        </button>
+      </div>
     </div>
   );
 }
