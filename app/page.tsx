@@ -1,104 +1,57 @@
 "use client";
 import { useState, useRef } from "react";
 
-export default function Page() {
-  const [nip, setNip] = useState("169606");
-  const [nama, setNama] = useState("Setiadi");
-  const [bagian, setBagian] = useState("Subbagian Tata Usaha");
-  const [status, setStatus] = useState("LIBUR");
-  const [foto, setFoto] = useState<string | null>(null);
-  const [showCam, setShowCam] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+export default function Page(){
+  const [nip,setNip]=useState("169606");
+  const [nama,setNama]=useState("Setiadi");
+  const [unit,setUnit]=useState("Subbagian Tata Usaha");
+  const [st,setSt]=useState("NAIK TRANSUM");
+  const [foto,setFoto]=useState("");
+  const [showCam,setShowCam]=useState(false);
+  const videoRef=useRef<HTMLVideoElement>(null);
+  const streamRef=useRef<MediaStream|null>(null);
 
-  const openCamera = async () => {
+  const bukaKamera=async()=>{
     setShowCam(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: "environment" } 
-      });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-    } catch (e) {
-      alert("Gagal buka kamera, pastikan ijin kamera diaktifkan!");
-      setShowCam(false);
-    }
-  };
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    streamRef.current=s;
+    if(videoRef.current) videoRef.current.srcObject=s;
+  }
+  const tutup=()=>{streamRef.current?.getTracks().forEach(t=>t.stop()); setShowCam(false);}
+  const jepret=()=>{
+    const v=videoRef.current!; const c=document.createElement("canvas");
+    c.width=v.videoWidth; c.height=v.videoHeight;
+    c.getContext("2d")?.drawImage(v,0,0);
+    setFoto(c.toDataURL("image/jpeg")); tutup();
+  }
 
-  const closeCamera = () => {
-    streamRef.current?.getTracks().forEach(t => t.stop());
-    setShowCam(false);
-  };
+  const isNaik=st.includes("NAIK");
+  const bisaSimpan = isNaik ? foto!=="" : true;
 
-  const takePhoto = () => {
-    const video = videoRef.current;
-    if (!video) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d")?.drawImage(video, 0, 0);
-    setFoto(canvas.toDataURL("image/jpeg", 0.8));
-    closeCamera();
-  };
-
-  const handleSubmit = () => {
-    if (status === "NAIK" && !foto) {
-      alert("Wajib FOTO bukti naik! Gak bisa kibul!");
-      return;
-    }
-    if (status === "LIBUR") {
-      alert("SUKSES! NAIK tanpa foto = TIDAK VALID di rekap");
-    } else {
-      alert(`SUKSES! ${nama} VALID NAIK dengan bukti foto! Anti Kibul!`);
-    }
-    // Reset foto after submit
-    // setFoto(null);
-  };
-
-  return (
-    <div className="min-h-screen bg-zinc-100 flex justify-center p-4">
-      <div className="w-full max-w-sm bg-white rounded-2xl shadow p-5 space-y-3">
-        <h1 className="font-bold text-center">TRANSPORT 515 - ANTI KIBUL</h1>
-        
-        <input className="w-full border rounded-lg p-3" value={nip} onChange={e=>setNip(e.target.value)} placeholder="NIP" />
-        <input className="w-full border rounded-lg p-3" value={nama} onChange={e=>setNama(e.target.value)} placeholder="Nama" />
-        <input className="w-full border rounded-lg p-3" value={bagian} onChange={e=>setBagian(e.target.value)} placeholder="Subbagian" />
-        
-        <select className="w-full border rounded-lg p-3" value={status} onChange={e=>{setStatus(e.target.value); if(e.target.value==="LIBUR") setFoto(null)}}>
-          <option>LIBUR</option>
-          <option>NAIK</option>
+  return(
+    <div style={{minHeight:'100vh', background:'#f8fafc', padding:16, fontFamily:'sans-serif'}}>
+      <div style={{maxWidth:400, margin:'0 auto', background:'white', padding:16, borderRadius:12, border:'1px solid #e2e8f0'}}>
+        <h1 style={{fontWeight:'bold', display:'flex', alignItems:'center', gap:8}}>🚌 Transport 515 - Anti Kibul</h1>
+        <input value={nip} onChange={e=>setNip(e.target.value)} placeholder="NIP" style={{width:'100%', marginTop:12, padding:10, border:'1px solid #cbd5e1', borderRadius:8}}/>
+        <input value={nama} onChange={e=>setNama(e.target.value)} placeholder="Nama" style={{width:'100%', marginTop:8, padding:10, border:'1px solid #cbd5e1', borderRadius:8}}/>
+        <input value={unit} onChange={e=>setUnit(e.target.value)} placeholder="Unit" style={{width:'100%', marginTop:8, padding:10, border:'1px solid #cbd5e1', borderRadius:8}}/>
+        <select value={st} onChange={e=>setSt(e.target.value)} style={{width:'100%', marginTop:8, padding:10, border:'1px solid #cbd5e1', borderRadius:8}}>
+          <option>NAIK TRANSUM</option><option>TURUN TRANSUM</option>
         </select>
 
-        {status === "NAIK" && (
-          <div className="space-y-2">
-            {!foto ? (
-              <button onClick={openCamera} className="w-full bg-blue-600 text-white rounded-lg p-3 font-bold">
-                📸 BUKA KAMERA (Wajib Foto Langsung)
-              </button>
-            ) : (
-              <div className="space-y-2">
-                <img src={foto} className="w-full rounded-lg border" />
-                <button onClick={()=>setFoto(null)} className="w-full bg-zinc-200 rounded-lg p-2 text-sm">Foto Ulang</button>
-              </div>
-            )}
-            <p className="text-[11px] text-red-600 font-bold text-center">* Tidak bisa ambil dari galeri, harus foto langsung!</p>
+        {isNaik && (
+          <div style={{marginTop:12, background:'#f0fdf4', border:'1px solid #bbf7d0', padding:10, borderRadius:8}}>
+            <div style={{fontWeight:'bold', fontSize:14}}>⚠️ WAJIB FOTO! Kalau naik tanpa foto = TIDAK VALID</div>
+            {!foto ? <button onClick={bukaKamera} style={{width:'100%', marginTop:8, padding:12, background:'#2563eb', color:'white', borderRadius:8, fontWeight:'bold'}}>📸 BUKA KAMERA LANGSUNG</button> :
+            <><img src={foto} style={{width:'100%', marginTop:8, borderRadius:8}}/><button onClick={()=>setFoto("")} style={{width:'100%', marginTop:6, padding:8, background:'#ef4444', color:'white', borderRadius:8}}>Foto Ulang</button></>}
           </div>
         )}
 
-        {showCam && (
-          <div className="fixed inset-0 bg-black z-50 flex flex-col">
-            <video ref={videoRef} autoPlay playsInline className="flex-1 object-cover" />
-            <div className="p-4 flex gap-3 bg-black">
-              <button onClick={closeCamera} className="flex-1 bg-zinc-700 text-white rounded-lg p-4">Batal</button>
-              <button onClick={takePhoto} className="flex-1 bg-white text-black rounded-lg p-4 font-bold">📸 JEPRET</button>
-            </div>
-          </div>
-        )}
-
-        <button onClick={handleSubmit} className="w-full bg-black text-white rounded-lg p-4 font-bold">
-          ✅ SUBMIT VALID
+        <button disabled={!bisaSimpan} style={{width:'100%', marginTop:12, padding:12, borderRadius:8, fontWeight:'bold', background: bisaSimpan?'#16a34a':'#94a3b8', color:'white'}}>
+          {bisaSimpan?'✅ SIMPAN ABSEN':'⚠️ LENGKAPI DULU'}
         </button>
       </div>
+      {showCam && <div style={{position:'fixed', inset:0, background:'black', zIndex:999, display:'flex', flexDirection:'column'}}><video ref={videoRef} autoPlay playsInline style={{flex:1, objectFit:'cover'}}/><div style={{padding:16, display:'flex', gap:8}}><button onClick={tutup} style={{flex:1, padding:12, background:'#334155', color:'white', borderRadius:8}}>Tutup</button><button onClick={jepret} style={{flex:2, padding:12, background:'white', color:'black', borderRadius:8, fontWeight:'bold'}}>JEPRET</button></div></div>}
     </div>
-  );
+  )
 }
