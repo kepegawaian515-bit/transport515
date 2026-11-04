@@ -13,7 +13,7 @@ export default function Page(){
 
   const bukaKamera=async()=>{
     setShowCam(true);
-    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}});
     streamRef.current=s;
     if(videoRef.current) videoRef.current.srcObject=s;
   }
